@@ -5,6 +5,18 @@ app_description = "naming series allocation for user"
 app_email = "nikhil@aitsind.com"
 app_license = "mit"
 
+app_include_js = "/assets/user_naming_series/js/user_naming_series.js"
+
+boot_session = "user_naming_series.user_series.boot_session"
+
+doc_events = {
+	"*": {
+		"before_naming": "user_naming_series.user_series.apply_user_naming_series",
+		"before_insert": "user_naming_series.user_series.apply_user_naming_series",
+		"validate": "user_naming_series.user_series.validate_user_naming_series",
+	}
+}
+
 # Apps
 # ------------------
 
@@ -246,4 +258,3 @@ app_license = "mit"
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-
