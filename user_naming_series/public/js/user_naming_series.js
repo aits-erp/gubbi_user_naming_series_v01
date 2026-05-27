@@ -45,6 +45,40 @@
 		}
 	}
 
+	function apply_list_rules() {
+		if (!frappe.get_route) {
+			return;
+		}
+
+		const route = frappe.get_route();
+		if (!route || route[0] !== "List" || !route[1]) {
+			return;
+		}
+
+		const doctype = route[1];
+		get_rules().then((user_rules) => {
+			const allowed = user_rules[doctype];
+			if (!allowed || !allowed.length) {
+				return;
+			}
+
+			frappe.route_options = frappe.route_options || {};
+			frappe.route_options.naming_series = ["in", allowed];
+
+			if (!window.cur_list || window.cur_list.doctype !== doctype || !window.cur_list.filter_area) {
+				return;
+			}
+
+			const key = allowed.join("\n");
+			if (window.cur_list.user_naming_series_filter === key) {
+				return;
+			}
+
+			window.cur_list.user_naming_series_filter = key;
+			window.cur_list.filter_area.add(doctype, "naming_series", "in", allowed);
+		});
+	}
+
 	$(document).on("form-refresh", function (_event, frm) {
 		apply_rules(frm);
 	});
@@ -52,6 +86,7 @@
 	if (frappe.router && frappe.router.on) {
 		frappe.router.on("change", function () {
 			setTimeout(apply_to_current_form, 300);
+			setTimeout(apply_list_rules, 300);
 		});
 	}
 })();

@@ -1,3 +1,5 @@
+import json
+
 import frappe
 from frappe import _
 from frappe.utils import cstr
@@ -10,6 +12,33 @@ SERIES_FIELD = "naming_series"
 
 def boot_session(bootinfo):
 	bootinfo.user_naming_series_rules = get_user_series_map()
+
+
+def restrict_reportview_by_series():
+	cmd = cstr(frappe.local.form_dict.get("cmd"))
+	if not cmd and getattr(frappe.local, "request", None):
+		path = cstr(frappe.local.request.path)
+		if "/api/method/" in path:
+			cmd = path.rsplit("/api/method/", 1)[-1]
+
+	if cmd not in {
+		"frappe.desk.reportview.get",
+		"frappe.desk.reportview.get_list",
+		"frappe.desk.reportview.get_count",
+		"frappe.desk.reportview.export_query",
+		"frappe.desk.reportview.get_sidebar_stats",
+		"frappe.desk.reportview.get_filter_dashboard_data",
+	}:
+		return
+
+	doctype = cstr(frappe.local.form_dict.get("doctype")).strip()
+	allowed = get_user_series_map().get(doctype)
+	if not allowed:
+		return
+
+	frappe.local.form_dict["filters"] = frappe.as_json(
+		_add_series_filter(doctype, frappe.local.form_dict.get("filters"), allowed)
+	)
 
 
 @frappe.whitelist()
@@ -75,6 +104,34 @@ def validate_user_naming_series(doc, method=None):
 				", ".join(allowed),
 			)
 		)
+
+
+def _add_series_filter(doctype, filters, allowed):
+	filters = _normalize_filters(doctype, filters)
+	filters.append([doctype, SERIES_FIELD, "in", allowed])
+	return filters
+
+
+def _normalize_filters(doctype, filters):
+	if not filters:
+		return []
+
+	if isinstance(filters, str):
+		filters = json.loads(filters)
+
+	if not filters:
+		return []
+
+	if isinstance(filters, dict):
+		normalized = []
+		for fieldname, value in filters.items():
+			if isinstance(value, (list, tuple)) and len(value) > 1:
+				normalized.append([doctype, fieldname, value[0], value[1]])
+			else:
+				normalized.append([doctype, fieldname, "=", value])
+		return normalized
+
+	return list(filters)
 
 
 def validate_settings_doc(doc):

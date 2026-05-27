@@ -9,6 +9,8 @@ app_include_js = "/assets/user_naming_series/js/user_naming_series.js"
 
 boot_session = "user_naming_series.user_series.boot_session"
 
+before_request = ["user_naming_series.user_series.restrict_reportview_by_series"]
+
 doc_events = {
 	"*": {
 		"before_naming": "user_naming_series.user_series.apply_user_naming_series",
